@@ -1,0 +1,226 @@
+local Event = script.Parent.Activate
+local VFX = game.ServerStorage["Lof VFX"]["Hollow Purple"]
+local TS = game:GetService("TweenService")
+local RS = game:GetService("RunService")
+local Lighting = game.Lighting
+local StatusEvent = game.ReplicatedStorage.Events
+local Camera = workspace.Camera
+
+Event.OnServerEvent:Connect(function(Player)
+	if Player == script.Parent.Parent.Parent and Player.Character.Humanoid.Health ~= 0 and Player.Status.InAction.Value == false and Player.Status.Stun.Value == false then
+		local Character = Player.Character
+		local HumRP = Character.HumanoidRootPart
+		local Hum = Character.Humanoid
+		Hum.WalkSpeed = 0
+		
+		local StunList = {}
+		spawn(function() --stun people in range
+			local PreHitbox = Instance.new("Part",workspace)
+			PreHitbox.Size = Vector3.new(20,11,110)
+			PreHitbox.CFrame = HumRP.CFrame * CFrame.new(0,0,-60)
+			PreHitbox.Transparency = 0.8
+			PreHitbox.Anchored = true
+			PreHitbox.CanCollide = false
+			for _, v in pairs(workspace:GetPartsInPart(PreHitbox)) do
+				local VictimChar = v.Parent
+				local VictimPlayer = game.Players:FindFirstChild(v.Parent.Name)
+				
+				if VictimChar ~= Player.Character and VictimChar:FindFirstChild("Humanoid") and VictimChar:FindFirstChild("Humanoid").Health ~= 0 and VictimPlayer ~= nil then
+					VictimPlayer.Status.Stun.Value = true
+					VictimChar:FindFirstChild("Humanoid").WalkSpeed = 1
+					table.insert(StunList,VictimPlayer)
+				end
+			end
+			task.wait()
+			PreHitbox:Destroy()
+		end)
+		
+		--music
+		spawn(function()
+			local Vocal = game.SoundService["Gojo Hollow Purplev2"]:Clone()
+			local Music = game.SoundService["Piano Hollow Purple"]:Clone()
+			Music.Parent = HumRP
+			Vocal.Parent = HumRP
+			
+			Music.TimePosition = 75.5
+			Vocal.TimePosition = 5.5
+			Music.Volume = 0
+			Vocal.Volume = 0
+			Vocal:Play()
+			TS:Create(Vocal,TweenInfo.new(0.8,Enum.EasingStyle.Sine),{Volume = 3}):Play()
+			task.wait(9.75)
+			TS:Create(Music,TweenInfo.new(0.8,Enum.EasingStyle.Sine),{Volume = 1}):Play()
+			Music:Play()
+			task.wait(0.7)
+			TS:Create(Vocal,TweenInfo.new(1,Enum.EasingStyle.Sine),{Volume = 0}):Play()
+			task.wait(1)
+			Vocal:Destroy()
+			task.wait(15)
+			TS:Create(Music,TweenInfo.new(4,Enum.EasingStyle.Sine),{Volume = 0}):Play()
+			Music:Destroy()
+		end)
+		
+		--voicelines
+		spawn(function()
+			
+		end)
+		
+		--summon red
+		spawn(function()
+			local RedCharge = VFX["Red Charge"]:Clone()
+			RedCharge.Parent = workspace.ActiveVFX
+			RedCharge.CFrame = HumRP.CFrame * CFrame.new(8,1.5,-5)
+			task.wait(0.001)
+			for _, v in pairs(RedCharge.Center:GetChildren()) do
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+			task.wait(0.6)
+			RedCharge:Destroy()
+			
+			Red = VFX["lof vfx red"]:Clone()
+			Red.Parent = workspace.ActiveVFX
+			Red:PivotTo(HumRP.CFrame * CFrame.new(8,1.5,-5))
+			--Red["Shine Sound"]:Play()
+		end)
+		task.wait()
+		--summon blue
+		spawn(function()
+			local BlueCharge = VFX["Blue Charge"]:Clone()
+			BlueCharge.Parent = workspace.ActiveVFX
+			BlueCharge.CFrame = HumRP.CFrame * CFrame.new(-8,1.5,-5)
+			task.wait(0.001)
+			for _, v in pairs(BlueCharge.Center:GetChildren()) do
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+			task.wait(0.6)
+			BlueCharge:Destroy()
+
+			Blue = VFX["lof vfx blue"]:Clone()
+			Blue.Parent = workspace.ActiveVFX
+			Blue:PivotTo(HumRP.CFrame * CFrame.new(-8,1.5,-5))
+			--Blue["Shine Sound"]:Play()
+		end)
+		
+		task.wait(1)
+		TS:Create(Red.PrimaryPart,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{CFrame = HumRP.CFrame * CFrame.new(0,1.5,-5)}):Play()
+		TS:Create(Blue.PrimaryPart,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{CFrame = HumRP.CFrame * CFrame.new(0,1.5,-5)}):Play()
+		task.wait(1)
+		Blue:Destroy()
+		Red:Destroy()
+
+		local Collide = VFX["Hollow Purple Collide"]:Clone()
+		Collide.Parent = workspace.ActiveVFX
+		Collide:PivotTo(HumRP.CFrame * CFrame.new(0,1.5,-5))
+		Collide.PrimaryPart.Orientation += Vector3.new(0,90,0)
+		task.wait()
+		for _, v in pairs(Collide.Main.Center:GetChildren()) do
+			v:Emit(v:GetAttribute("EmitCount"))
+		end
+		
+		spawn(function()
+			task.wait(3.5)
+			TS:Create(Lighting.ColorCorrection,TweenInfo.new(0.5,Enum.EasingStyle.Sine),{Contrast = 0.5, Saturation = 0.5}):Play()
+		end)
+		task.wait(4)
+		local PurpleShine = VFX["Hollow Purple Charge"]:Clone()
+		PurpleShine.Parent = workspace.ActiveVFX
+		
+		local Weld = Instance.new("Weld",PurpleShine)
+		Weld.Part0 = PurpleShine.Main
+		Weld.Part1 = Character["Right Arm"]
+		Weld.C0 = CFrame.new(0,2,0)
+		
+		PurpleShine.Ambience.Anchored = true
+		PurpleShine.Ambience.CFrame = PurpleShine.Main.CFrame
+
+		task.wait(3.75)
+		spawn(function()
+			spawn(function()
+				PurpleShine:Destroy() --destroy while cant see
+				Lighting.ColorCorrection.Brightness = -5
+				task.wait(0.1)
+				Lighting.ColorCorrection.Brightness = 5
+				task.wait(0.1)
+				Lighting.ColorCorrection.Brightness = 0
+				Lighting.ColorCorrection.Saturation = 0
+				Lighting.ColorCorrection.Contrast = 0
+			end)
+		
+			local Purple = VFX["lof vfx purple"]:Clone()
+			Purple.Parent = workspace.ActiveVFX
+			Purple:PivotTo(HumRP.CFrame * CFrame.new(0,6,-5))
+			
+			local bv = Instance.new("BodyVelocity",Purple.ball)
+			bv.MaxForce = Vector3.new(math.huge,math.huge,math.huge)
+			bv.Velocity = HumRP.CFrame.lookVector * 25
+			
+			spawn(function()
+				for i = 0.9, 2.2, 0.05 do
+					Purple:ScaleTo(i)
+					task.wait()
+				end
+			end)
+			
+			local Active = true	
+			spawn(function()
+				while Active do
+					--Hitbox
+					for _, v in pairs(workspace:GetPartsInPart(Purple.Hitbox)) do
+						local VictimChar = v.Parent
+						if VictimChar ~= Player.Character and VictimChar:FindFirstChild("Humanoid") and VictimChar:FindFirstChild("Humanoid").Health ~= 0 then
+							VictimChar.Humanoid.Health = 0
+						end
+					end
+					task.wait()
+				end
+				for _, v in pairs(StunList) do
+					v.Status.Stun.Value = false
+				end
+			end)
+			
+			local TotalRubble = {}
+			spawn(function()
+				while Active do
+					--Rubble
+					local function rubble(ray,xpos,ypos,size)
+						spawn(function()
+							if Active then
+								local Rubble = Instance.new("Part",workspace.ActiveVFX)
+								Rubble.CFrame = Purple.ball.CFrame * CFrame.new(xpos,ypos,0)
+								Rubble.Anchored = true
+								Rubble.Orientation = Vector3.new(math.random(360),math.random(360),math.random(360))
+								Rubble.Size = size
+								Rubble.Color = ray.Instance.Color
+								Rubble.Material = ray.Instance.Material
+
+								table.insert(TotalRubble,Rubble)
+								task.wait(4)
+								TS:Create(Rubble,TweenInfo.new(1,Enum.EasingStyle.Sine),{Position = Rubble.Position - Vector3.new(0,4,0)}):Play()
+								task.wait(1)
+								Rubble:Destroy()
+							end
+						end)				
+					end
+						
+					local params = RaycastParams.new()
+					params.FilterType = Enum.RaycastFilterType.Exclude
+					params.FilterDescendantsInstances = Purple:GetChildren()
+					local ray = workspace:Raycast(Purple.ball.Position,Vector3.new(0,-10,0),params)
+					if ray and ray.Instance.CanCollide == true then
+						--bigger rubble
+						rubble(ray,-7,-10,Vector3.new(4,4,4))
+						rubble(ray,7,-10,Vector3.new(4,4,4))
+						--smaller rubble
+						rubble(ray,-9,-9.5,Vector3.new(2,2,2))
+						rubble(ray,9,-9.5,Vector3.new(2,2,2))
+					end			
+					task.wait(0.05)
+				end
+			end)
+			
+			task.wait(8)
+			Active = false
+			Purple:Destroy()
+		end)
+	end
+end)
