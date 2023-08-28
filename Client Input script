@@ -1,0 +1,40 @@
+local Player = game.Players.LocalPlayer
+local UIP = game:GetService("UserInputService")
+local TS = game:GetService("TweenService")
+local Event = script.Activate
+local UpdateStatus = game.ReplicatedStorage.Events.Status
+local Camera = workspace.CurrentCamera
+local Debounce = true
+
+local Vocal = game.SoundService["Gojo Hollow Purplev2"]
+local Music = game.SoundService["Piano Hollow Purple"]
+UIP.InputBegan:Connect(function(Input, GPE)
+	if not GPE then
+		if Input.KeyCode == Enum.KeyCode.X and Debounce and Player.Status.InAction.Value == false and Player.Status.Stun.Value == false then
+			--variables
+			Debounce = false
+			spawn(function()
+				UpdateStatus:FireServer("InAction", true)
+				Player.Character.Humanoid.WalkSpeed = 0
+				task.wait(11.25)
+				UpdateStatus:FireServer("InAction", false)
+				Player.Character.Humanoid.WalkSpeed = 16
+			end)
+			
+			Event:FireServer()
+			local Anim = Player.Character.Humanoid:LoadAnimation(game.ReplicatedStorage.Anims["Hollow Purple"])
+			Anim:Play()
+			
+			--cam
+			spawn(function()
+				task.wait(6)
+				TS:Create(Camera,TweenInfo.new(0.6,Enum.EasingStyle.Quart),{FieldOfView = 55}):Play()
+				task.wait(3.85)
+				TS:Create(Camera,TweenInfo.new(0.8,Enum.EasingStyle.Back),{FieldOfView = 70}):Play()
+			end)
+		
+			task.wait(30)
+			Debounce = true
+		end
+	end
+end)
