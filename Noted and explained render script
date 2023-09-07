@@ -1,0 +1,260 @@
+--idk if this is technically 200 lines but it reaches it so yeah
+--if it doesnt, i can simply add a few more lines of code (such as the impact frames, or tweening on the rocks to circle around it at the end)
+--also, important note is that this is one of the many scripts that are working together as this is framework or combat scripting
+--following that, i gotta pass around remote events for it to be more efficient
+--but hey if you wanna see the other scripts such as the local scripts that deal with the player input, or the other rendering scripts i have for other moves im free to show ya
+
+--Variables
+local Event = script.Parent.Activate
+local VFX = game.ServerStorage["Lof VFX"]["Hollow Purple"]
+local TS = game:GetService("TweenService")
+local RS = game:GetService("RunService")
+local Lighting = game.Lighting
+local StatusEvent = game.ReplicatedStorage.Events
+local Camera = workspace.Camera
+
+--On click event
+Event.OnServerEvent:Connect(function(Player)
+	if Player == script.Parent.Parent.Parent and Player.Character.Humanoid.Health ~= 0 and Player.Status.InAction.Value == false and Player.Status.Stun.Value == false then --checks if the player is an actual player, not dead, and the player is not stunned or in an action]
+		--variables
+		local Character = Player.Character
+		local HumRP = Character.HumanoidRootPart
+		local Hum = Character.Humanoid
+		Hum.WalkSpeed = 0 -- so player cannot move during this action	
+		
+		local StunList = {} --table of up-coming players inside of the prehitbox
+		spawn(function()
+			--spawn an invisible "prehitbox" so that it grabs all the players inside of the hitbox and makes their movement speed set to 1 and their stun value true. this function is only for PLAYERS and not dummys or npcs
+			local PreHitbox = Instance.new("Part",workspace)
+			PreHitbox.Size = Vector3.new(20,11,110)
+			PreHitbox.CFrame = HumRP.CFrame * CFrame.new(0,0,-60)
+			PreHitbox.Transparency = 0.8
+			PreHitbox.Anchored = true
+			PreHitbox.CanCollide = false
+			--loops through the parts inside of the prehitbox
+			for _, v in pairs(workspace:GetPartsInPart(PreHitbox)) do
+				local VictimChar = v.Parent 
+				local VictimPlayer = game.Players:FindFirstChild(v.Parent.Name) --can be nil (if its a dummy) or can be a player
+				
+				--if the victim is not the client itself, the victims char has a humanoid, its not dead, and its not a dummy, then
+				if VictimChar ~= Player.Character and VictimChar:FindFirstChild("Humanoid") and VictimChar:FindFirstChild("Humanoid").Health ~= 0 and VictimPlayer ~= nil then
+					VictimPlayer.Status.Stun.Value = true
+					VictimChar:FindFirstChild("Humanoid").WalkSpeed = 1
+					table.insert(StunList,VictimPlayer)
+				end
+			end
+			--destroys the hitbox shortly after
+			task.wait()
+			PreHitbox:Destroy()
+		end)
+		
+		--music and vocals
+		spawn(function()
+			--allows music and vocals to be heard by everyone by setting it to the clients humrp
+			local Vocal = game.SoundService["Gojo Hollow Purplev2"]:Clone()
+			local Music = game.SoundService["Piano Hollow Purple"]:Clone()
+			Music.Parent = HumRP
+			Vocal.Parent = HumRP
+			
+			--sets the time position to its appropriate start times
+			Music.TimePosition = 75.5
+			Vocal.TimePosition = 5.5
+			Music.Volume = 0
+			Vocal.Volume = 0
+			
+			--tweens the vocals to get louder, creating a more natural effect
+			Vocal:Play()
+			TS:Create(Vocal,TweenInfo.new(0.8,Enum.EasingStyle.Sine),{Volume = 3}):Play()
+			--waits for the vocals to finish, then plays the music to follow after 
+			task.wait(9.75)
+			Music:Play()
+			--tweens the music to get louder, again to create a natural effect
+			TS:Create(Music,TweenInfo.new(0.8,Enum.EasingStyle.Sine),{Volume = 1}):Play()
+			task.wait(0.7)
+			--waits just a small amount of time to delete the vocals so it doesnt continue talking (the shine sound is apart of the vocals, so i have to tween it slowly so it can appear like its fading)
+			TS:Create(Vocal,TweenInfo.new(1,Enum.EasingStyle.Sine),{Volume = 0}):Play()
+			task.wait(1)
+			Vocal:Destroy()
+			--then lets the music play for 15 seconds, then slowly fades it out and deletes it
+			task.wait(15)
+			TS:Create(Music,TweenInfo.new(4,Enum.EasingStyle.Sine),{Volume = 0}):Play()
+			Music:Destroy()
+		end)
+		
+		--summon red (these both spawn at the same time btw)
+		spawn(function()
+			local RedCharge = VFX["Red Charge"]:Clone()
+			RedCharge.Parent = workspace.ActiveVFX --active vfx is jsut a folder for the active vfx in the workspace, i found it easier than using getdebris()
+			RedCharge.CFrame = HumRP.CFrame * CFrame.new(8,1.5,-5) --sets the pos of the red ball to be on the right of the character
+			--goes through all of the particle emitters of the swirl charge effect
+			task.wait(0.001) --(this is here because if it isnt, it cant run the function as the vfx just spawned in)
+			for _, v in pairs(RedCharge.Center:GetChildren()) do
+				v:Emit(v:GetAttribute("EmitCount")) --emits by the emit count attribute listed in the particle emitter
+			end
+			--waits for the vfx to dissapear (which they all have around a lifetime of 0.6), then deletes the vfx
+			task.wait(0.6)
+			RedCharge:Destroy()
+			
+			--finally summons the main red ball, doesnt need to use any emit functions (thank god) due to the fact that it has to be enabled instead
+			Red = VFX["lof vfx red"]:Clone()
+			Red.Parent = workspace.ActiveVFX
+			Red:PivotTo(HumRP.CFrame * CFrame.new(8,1.5,-5)) --again, pivots to the spot the charge effect was at (right of the char), so it looked like it winded up to create the ball
+			--Red["Shine Sound"]:Play() this is just here bc of sound testing, i wanted to see if i liked some sfx or not
+		end)
+		task.wait()
+		--summon blue (everything here is the <<EXACT SAME>> as the summon red function, the only difference is that its blue, nothing else)
+		--oh and it spawns to the left of the character instead, so they merge together yknow
+		spawn(function()
+			local BlueCharge = VFX["Blue Charge"]:Clone()
+			BlueCharge.Parent = workspace.ActiveVFX
+			BlueCharge.CFrame = HumRP.CFrame * CFrame.new(-8,1.5,-5)
+			task.wait(0.001)
+			for _, v in pairs(BlueCharge.Center:GetChildren()) do
+				v:Emit(v:GetAttribute("EmitCount"))
+			end
+			task.wait(0.6)
+			BlueCharge:Destroy()
+
+			Blue = VFX["lof vfx blue"]:Clone()
+			Blue.Parent = workspace.ActiveVFX
+			Blue:PivotTo(HumRP.CFrame * CFrame.new(-8,1.5,-5))
+			--Blue["Shine Sound"]:Play()
+		end)
+		
+		--waits a second, then starts tweening to go inside of each other (directly infront of the char)
+		task.wait(1)
+		TS:Create(Red.PrimaryPart,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{CFrame = HumRP.CFrame * CFrame.new(0,1.5,-5)}):Play()
+		TS:Create(Blue.PrimaryPart,TweenInfo.new(1,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{CFrame = HumRP.CFrame * CFrame.new(0,1.5,-5)}):Play()
+		task.wait(1)
+		--after waiting for the tween to end, it creates a merging effect as it both destroys once the tween is done
+		Blue:Destroy()
+		Red:Destroy()
+		
+		--collide vfx to again, show a merging effect
+		local Collide = VFX["Hollow Purple Collide"]:Clone()
+		Collide.Parent = workspace.ActiveVFX
+		Collide:PivotTo(HumRP.CFrame * CFrame.new(0,1.5,-5)) --pivots to the point of immersion (aka front of the character)
+		Collide.PrimaryPart.Orientation += Vector3.new(0,90,0) --adds 90 to the Y chord of the orientation, that way its not facing face forward to the character, instead its facing side forward
+		--again, waits a second bc it just spawned and then goes through the particle emitters
+		task.wait()
+		for _, v in pairs(Collide.Main.Center:GetChildren()) do
+			v:Emit(v:GetAttribute("EmitCount")) --emits by the particle emitters emit amount
+		end
+		
+		--this function waits a few seconds, then tweens the lighting to be dim, ominous
+		spawn(function()
+			task.wait(3.5)
+			TS:Create(Lighting.ColorCorrection,TweenInfo.new(0.5,Enum.EasingStyle.Sine),{Contrast = 0.5, Saturation = 0.5}):Play()
+		end)
+		
+		--after 4 seconds (this is when the player holds out his hand) it spawns the shining vfx
+		task.wait(4)
+		local PurpleShine = VFX["Hollow Purple Charge"]:Clone()
+		PurpleShine.Parent = workspace.ActiveVFX
+		
+		--welds the shining vfx to the players hand
+		local Weld = Instance.new("Weld",PurpleShine)
+		Weld.Part0 = PurpleShine.Main
+		Weld.Part1 = Character["Right Arm"]
+		Weld.C0 = CFrame.new(0,2,0) --again, positions it at the hand
+		
+		--this is the ambience, its the lightning and dust stuff thats apart of the shine vfx
+		PurpleShine.Ambience.Anchored = true
+		PurpleShine.Ambience.CFrame = PurpleShine.Main.CFrame
+		
+		task.wait(3.75)
+		spawn(function()
+			spawn(function() --after a few seconds, flashes the screen black to white to normal to create somewhat of an impact frame effect (im still working on impact frames)
+				PurpleShine:Destroy() --destroy while cant see from the impact frames
+				Lighting.ColorCorrection.Brightness = -5
+				task.wait(0.1)
+				Lighting.ColorCorrection.Brightness = 5
+				task.wait(0.1)
+				Lighting.ColorCorrection.Brightness = 0
+				Lighting.ColorCorrection.Saturation = 0
+				Lighting.ColorCorrection.Contrast = 0
+			end)
+			
+			--clones the purple ball and positions it infront of the character again
+			local Purple = VFX["lof vfx purple"]:Clone()
+			Purple.Parent = workspace.ActiveVFX
+			Purple:PivotTo(HumRP.CFrame * CFrame.new(0,6,-5))
+			
+			--sets the velocity to be the humrp's lookvector * a lil bit so it can fly forward
+			local bv = Instance.new("BodyVelocity",Purple.ball)
+			bv.MaxForce = Vector3.new(math.huge,math.huge,math.huge)
+			bv.Velocity = HumRP.CFrame.lookVector * 25
+			
+			--slowly scales it up so it looks like its getting bigger, like a snowball being rolled over snow (this is here, after the velocity for personal preference)
+			spawn(function()
+				for i = 0.9, 2.2, 0.05 do
+					Purple:ScaleTo(i)
+					task.wait()
+				end
+			end)
+		
+			local Active = true --variable for identifying if the ball is still there and not deleted yet	
+			spawn(function()
+				while Active do
+					--checks for hitbox in a while true do loop so it checks for victims inside of the ball/hitbox
+					for _, v in pairs(workspace:GetPartsInPart(Purple.Hitbox)) do
+						local VictimChar = v.Parent --can be nil
+						if VictimChar ~= Player.Character and VictimChar:FindFirstChild("Humanoid") and VictimChar:FindFirstChild("Humanoid").Health ~= 0 then --if the player is not the client, it has a humanoid and its not dead, then
+							VictimChar.Humanoid.Health = 0 --kill em (this is SUPPOSED to be an instakill)
+							game.Players:FindFirstChild(VictimChar.Name).Status.Stun.Value = false --sets their stun value back to false as yknow, they died so its gonna have to be reset
+						end
+					end
+					task.wait()
+				end
+			end)
+		
+			local TotalRubble = {} --table consisting of all of the rubble thats about to be spawned
+			spawn(function()
+				while Active do
+					--while the ball is active, it spawns, yknow rubble
+					local function rubble(ray,xpos,ypos,size) --ray is, yknow the ray that the ball casts under itself, xpos is the xpos (left or right you will see later), ypos is where the ground is (generally), size is just, size
+						spawn(function()
+							if Active then --checks if its even active at all (theres brief periods where it isnt once the ball gets destroyed)
+								local Rubble = Instance.new("Part",workspace.ActiveVFX)
+								Rubble.CFrame = Purple.ball.CFrame * CFrame.new(xpos,ypos,0) --sets the cframe to be on the ground, and either left or right of the ball
+								Rubble.Anchored = true
+								Rubble.Orientation = Vector3.new(math.random(360),math.random(360),math.random(360)) --randomizes the rotation
+								Rubble.Size = size
+								--sets the color and material to match the ground
+								Rubble.Color = ray.Instance.Color
+								Rubble.Material = ray.Instance.Material
+
+								table.insert(TotalRubble,Rubble) --inserts this rubble rock inside of the table "totalrubble"
+								--waits a few seconds, then tweens the rocks to slowly fall in the ground and naturally dissapear (this is why the script is a spawn function)
+								task.wait(4)
+								TS:Create(Rubble,TweenInfo.new(1,Enum.EasingStyle.Sine),{Position = Rubble.Position - Vector3.new(0,4,0)}):Play()
+								task.wait(1)
+								Rubble:Destroy()
+							end
+						end)				
+					end
+					
+					--just rules for the raycast
+					local params = RaycastParams.new()
+					params.FilterType = Enum.RaycastFilterType.Exclude
+					params.FilterDescendantsInstances = Purple:GetChildren() --makes sure it doesnt accidentally get the ball 
+					local ray = workspace:Raycast(Purple.ball.Position,Vector3.new(0,-10,0),params) --casts a ray at the balls position, going down by -10 as the ball is around that height
+					if ray and ray.Instance.CanCollide == true then --if this instance can collide, then it spawns the rubble (this is important as it can ignore invisible parts)
+						--bigger rubble
+						rubble(ray,-7,-10,Vector3.new(4,4,4)) --spawns on left
+						rubble(ray,7,-10,Vector3.new(4,4,4)) --spawns on right
+						--smaller rubble
+						rubble(ray,-9,-9.5,Vector3.new(2,2,2)) --again, left
+						rubble(ray,9,-9.5,Vector3.new(2,2,2)) --right
+					end			
+					task.wait(0.05) --waits a little in between each time it spawns the rubble, so that way it doesnt clump together
+				end
+			end)
+			
+			--then, after 8 seconds the ball dissapears and sets the active value to false as we dont want the loop running forever
+			task.wait(8)
+			Active = false
+			Purple:Destroy()
+		end)
+	end
+end)
