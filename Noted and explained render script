@@ -199,9 +199,12 @@ Event.OnServerEvent:Connect(function(Player)
 					--checks for hitbox in a while true do loop so it checks for victims inside of the ball/hitbox
 					for _, v in pairs(workspace:GetPartsInPart(Purple.Hitbox)) do
 						local VictimChar = v.Parent --can be nil
+						local VictimPlayer = game.Players:FindFirstChild(VictimChar.Name)
 						if VictimChar ~= Player.Character and VictimChar:FindFirstChild("Humanoid") and VictimChar:FindFirstChild("Humanoid").Health ~= 0 then --if the player is not the client, it has a humanoid and its not dead, then
 							VictimChar.Humanoid.Health = 0 --kill em (this is SUPPOSED to be an instakill)
-							game.Players:FindFirstChild(VictimChar.Name).Status.Stun.Value = false --sets their stun value back to false as yknow, they died so its gonna have to be reset
+							if VictimPlayer ~= nil then --also, if it isnt a dummy and an actual player then
+								VictimPlayer.Status.Stun.Value = false --sets their stun value back to false as yknow, they died so its gonna have to be reset
+							end
 						end
 					end
 					task.wait()
